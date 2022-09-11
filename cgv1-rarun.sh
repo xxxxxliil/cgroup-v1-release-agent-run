@@ -63,4 +63,4 @@ mkdir -p "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}"
 sh -c "echo \$\$ > ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}/cgroup.procs"
 echo "Welcome to using base on cgroup v1's PoC: meta cgroup run!!!"
 
-umount "${CGV1_RARUN_MOUNT_PATH}"
+rmdir ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME} && umount "${CGV1_RARUN_MOUNT_PATH}"
