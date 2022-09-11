@@ -55,9 +55,8 @@ mount -o name="${CGV1_RARUN_NAME}",none,"${CGV1_RARUN_MOUNT_OPTIONS}" -t cgroup 
 echo "${RUN_PROG_PATH}" >"${CGV1_RARUN_MOUNT_PATH}/release_agent"
 
 
+echo 1 >"${CGV1_RARUN_MOUNT_PATH}/notify_on_release"
 mkdir -p "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}"
-#不能对根 cgroup 设置 notify_on_release，否则不会触发
-echo 1 >"${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}/notify_on_release"
 
 #写入一个转瞬即逝的进程就好
 #enjoy
