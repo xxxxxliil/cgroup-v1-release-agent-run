@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 
 
@@ -17,19 +17,21 @@
 CGV1_RARUN_BASE_DIR='/dev'
 CGV1_RARUN_NAME='nosubsys-cgv1'
 CGV1_RARUN_MOUNT_PATH="${CGV1_RARUN_BASE_DIR}/${CGV1_RARUN_NAME}"
-CGV1_RARUN_MOUNT_OPTIONS="nodev,noexec,nosuid,relatime"
-CGV1_RARUN_RUN_NODE_NAME="${CGV1_RARUN_NAME}-run"
+CGV1_RARUN_MOUNT_OPTIONS="${CGV1_RARUN_NAME},none,nodev,noexec,nosuid,relatime"
+CGV1_RARUN_TRIGGER_NODE_PATH_NAME="${CGV1_RARUN_NAME}-run"
+CGV1_RARUN_TRIGGER_VERIFY_FILE="${CGV1_RARUN_BASE_DIR}/cgv1-rarun.ok"
 
 MAKE_RUN_PROG_PATH="true"
-RUN_PROG_PATH="${CGV1_RARUN_BASE_DIR}/${CGV1_RARUN_RUN_NODE_NAME}.sh"
+RUN_PROG_PATH="${CGV1_RARUN_BASE_DIR}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}.sh"
 
 
 
-echo "run ${RUN_PROG_PATH}"
 if [ "${MAKE_RUN_PROG_PATH}" = 'true' ]; then
-  cat > "${RUN_PROG_PATH}" <<-EOF
+    cat > "${RUN_PROG_PATH}" <<-EOF
 #!/bin/sh
 
+
+# 我知道这里充满了 anti-pattern，但是我没有办法解决它
 exec >/dev/cgv1-rarun.sh.out
 exec 2>/dev/cgv1-rarun.sh.err
 
@@ -42,13 +44,22 @@ echo "args: \${@}"
 echo "env: "
 set
 
+touch /dev/cgv1-rarun.ok
+
 sleep 9999
 EOF
-  chmod 0755 "${RUN_PROG_PATH}"
+    chmod 0755 "${RUN_PROG_PATH}"
 fi
+echo "run ${RUN_PROG_PATH}"
 
-[ ! -d "${CGV1_RARUN_MOUNT_PATH}" ] && mkdir "${CGV1_RARUN_MOUNT_PATH}"
-mount -o name="${CGV1_RARUN_NAME}",none,"${CGV1_RARUN_MOUNT_OPTIONS}" -t cgroup "${CGV1_RARUN_NAME}" "${CGV1_RARUN_MOUNT_PATH}"
+# 不检查 uid，为了可能的 uid != 0  但拥有 CAP_SYSADMIN 进程
+[ ! -d "${CGV1_RARUN_MOUNT_PATH}" ] && mkdir -p "${CGV1_RARUN_MOUNT_PATH}"
+mount | grep "^${CGV1_RARUN_NAME}" >/dev/null 2>&1 || {
+    mount -o "name=${CGV1_RARUN_MOUNT_OPTIONS}" -t cgroup \
+        "${CGV1_RARUN_NAME}" "${CGV1_RARUN_MOUNT_PATH}" ||
+        { echo "[FAIL]: Can't mount cgroup node" >&2; exit 1; }
+}
+
 
 #我不知道 Linux Kernel 会不会一直执行它，反正我不认为用这玩意当服务管理器是什么好主意，相反，这很坏
 #^: 指会不会有执行时间限制
@@ -56,11 +67,17 @@ echo "${RUN_PROG_PATH}" >"${CGV1_RARUN_MOUNT_PATH}/release_agent"
 
 
 echo 1 >"${CGV1_RARUN_MOUNT_PATH}/notify_on_release"
-mkdir -p "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}"
+mkdir -p "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}"
 
 #写入一个转瞬即逝的进程就好
 #enjoy
-sh -c "echo \$\$ > ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME}/cgroup.procs"
-echo "Welcome to using base on cgroup v1's PoC: meta cgroup run!!!"
+sh -c "echo \$\$ > ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}/cgroup.procs"
+until [ -f "${CGV1_RARUN_TRIGGER_VERIFY_FILE}" ]; do
+    count=$((${count:=0}+1)); sleep 0.25
+    [ ${count} = 7 ] && { echo "[FAIL] Please check the SELinux rules or capability!!!" >&2; exit 1; }
+done
 
-rmdir ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_RUN_NODE_NAME} && umount "${CGV1_RARUN_MOUNT_PATH}"
+echo "Welcome to using base on cgroup v1's PoC: meta cgroup run!!!"
+rmdir ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME} && \
+    umount "${CGV1_RARUN_MOUNT_PATH}" && \
+    rm -f "${CGV1_RARUN_TRIGGER_VERIFY_FILE}"
