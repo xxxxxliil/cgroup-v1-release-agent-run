@@ -2,7 +2,7 @@
 
 
 
-#cgv1ra run: 基于 cgroup v1 的 notify_on_release 机制运行特定程序的 PoC
+# cgroup-v1-release-agent-run: 基于 cgroup v1 的 notify_on_release 机制运行特定程序的 PoC
 # xxxxxliil@github 于 2021-05-06 09:17 时成功在学校运行 Windows 的电脑里用 VirtualBox 运行的 Arch 手动触发 cgroup v1 的 notify_on_release 机制，随后写了这个 PoC
 #更：stat(1) 说这个人在 2021-05-06 10:13:19 初步完成
 #stat: 最近更改：2021-05-06 10:13:19
