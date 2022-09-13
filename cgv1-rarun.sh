@@ -2,15 +2,10 @@
 
 
 
-# cgroup-v1-release-agent-run: 基于 cgroup v1 的 notify_on_release 机制运行特定程序的 PoC
+# cgroup-v1-release-agent-run: 滥用 cgroup v1 notify_on_release 机制运行特定程序的 PoC
 # xxxxxliil@github 于 2021-05-06 09:17 时成功在学校运行 Windows 的电脑里用 VirtualBox 运行的 Arch 手动触发 cgroup v1 的 notify_on_release 机制，随后写了这个 PoC
 #更：stat(1) 说这个人在 2021-05-06 10:13:19 初步完成
 #stat: 最近更改：2021-05-06 10:13:19
-
-#不可能在 cgroup v2 存在，提前对那些“我有一个大胆的想法”的家伙们说一下
-#这个 PoC 不应当作为一个 service supervision 使用！当然，没有人拦着你这么做
-#题外话：还好 kingroot 没有在它不提供任何更新之前发现她，否则 kingroot 带有 kworker 名字的 daemon 就真的能以假乱真了
-#留个问题：kingroot 和 360root 在 2021 年还提供服务吗？我的手机需要它（假设有空的话我看看能不能搞一个 360root/kingroot 转 SuperSU 或者其他 SU 的东西）
 
 
 
