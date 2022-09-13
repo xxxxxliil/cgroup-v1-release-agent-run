@@ -21,9 +21,15 @@ CGV1_RARUN_MOUNT_OPTIONS="${CGV1_RARUN_NAME},none,nodev,noexec,nosuid,relatime"
 CGV1_RARUN_TRIGGER_NODE_PATH_NAME="${CGV1_RARUN_NAME}-run"
 CGV1_RARUN_TRIGGER_VERIFY_FILE="${CGV1_RARUN_BASE_DIR}/cgv1-rarun.ok"
 
+ALWAYS_CLEAN="false"
 MAKE_RUN_PROG_PATH="true"
 RUN_PROG_PATH="${CGV1_RARUN_BASE_DIR}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}.sh"
 
+clean(){
+    rmdir "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}"
+    umount "${CGV1_RARUN_MOUNT_PATH}" && rmdir "${CGV1_RARUN_MOUNT_PATH}"
+    rm -f "${CGV1_RARUN_TRIGGER_VERIFY_FILE}"
+}
 
 
 if [ "${MAKE_RUN_PROG_PATH}" = 'true' ]; then
@@ -70,14 +76,17 @@ echo 1 >"${CGV1_RARUN_MOUNT_PATH}/notify_on_release"
 mkdir -p "${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}"
 
 #写入一个转瞬即逝的进程就好
-#enjoy
+agent_run_failed='false'
 sh -c "echo \$\$ > ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}/cgroup.procs"
 until [ -f "${CGV1_RARUN_TRIGGER_VERIFY_FILE}" ]; do
     count=$((${count:=0}+1)); sleep 0.25
-    [ ${count} = 7 ] && { echo "[FAIL] Please check the SELinux rules or capability!!!" >&2; exit 1; }
+    [ ${count} = 7 ] && agent_run_failed='true' && break
 done
 
-echo "Welcome to using base on cgroup v1's PoC: meta cgroup run!!!"
-rmdir ${CGV1_RARUN_MOUNT_PATH}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME} && \
-    umount "${CGV1_RARUN_MOUNT_PATH}" && \
-    rm -f "${CGV1_RARUN_TRIGGER_VERIFY_FILE}"
+if [ ${agent_run_failed} = 'true' ]; then
+    echo "[FAIL] Please check the SELinux rules or capability!!!" >&2
+    [ "${ALWAYS_CLEAN}" = 'true' ] && clean; exit 1
+else
+    echo "Welcome to using base on cgroup v1's PoC: meta cgroup run!!!"
+    clean
+fi
