@@ -22,7 +22,10 @@ CGV1_RARUN_TRIGGER_NODE_PATH_NAME="${CGV1_RARUN_NAME}-run"
 CGV1_RARUN_TRIGGER_VERIFY_FILE="${CGV1_RARUN_BASE_DIR}/cgv1-rarun.ok"
 
 ALWAYS_CLEAN="false"
+BUT_I_USING_OLD_ANDROID="false"
 MAKE_RUN_PROG_PATH="true"
+PS="ps -wwef"
+SHEBANG="#!/bin/sh"
 RUN_PROG_PATH="${CGV1_RARUN_BASE_DIR}/${CGV1_RARUN_TRIGGER_NODE_PATH_NAME}.sh"
 
 clean(){
@@ -33,24 +36,48 @@ clean(){
 
 
 if [ "${MAKE_RUN_PROG_PATH}" = 'true' ]; then
+    if [ "${BUT_I_USING_OLD_ANDROID}" = 'true' ]; then
+        CGV1_RARUN_MOUNT_OPTIONS="${CGV1_RARUN_MOUNT_OPTIONS%,relatime*}"
+        PS='ps'
+        SET_PATH="PATH=${PATH}; export PATH"
+        SHEBANG="#!/system/bin/sh"
+        android_addon_1='(
+    exec >/dev/cgv1rr-pre.out;
+    ls -aZl /proc/self/fd;
+    ls -aZl /proc/$$/; ls -aZl /proc/$$/fd; echo $$;
+    ls -aZl /proc/$PPID/; ls -aZl /proc/$PPID/fd; ls -al /proc/$PPID/fdinfo; echo $PPID;
+    busybox ps -o user,group,pid,ppid,pgid,rgroup,stat,sid,args;
+)'
+        android_addon_2='ls -aZl /proc/$$/
+for i in $(ls /proc/$$/attr);do
+    echo "$i: $(cat /proc/$$/attr/$i)"
+done
+ls -aZl /proc/$$/fd'
+    fi
     cat > "${RUN_PROG_PATH}" <<-EOF
-#!/bin/sh
+${SHEBANG}
+
 
 
 # 我知道这里充满了 anti-pattern，但是我没有办法解决它
+
+${SET_PATH}
+${android_addon_1}
+
 exec >/dev/cgv1-rarun.sh.out
 exec 2>/dev/cgv1-rarun.sh.err
 
 echo "Welcome to using base on cgroup v1's PoC: cgroup v1 release run!!!"
 echo "Welcome to using base on cgroup v1's PoC: cgroup v1 release run!!!(With stderr)" >&2
 
-ps -wwef
+${PS}
 
 echo "args: \${@}"
 echo "env: "
 set
 
 touch /dev/cgv1-rarun.ok
+${android_addon_2}
 
 sleep 9999
 EOF
